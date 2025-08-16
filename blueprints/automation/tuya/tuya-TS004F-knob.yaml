@@ -6,9 +6,9 @@ blueprint:
     This automation adds triggers for all actions of the Tuya TS004F rotating knob remote.
     It provides simple custom actions for five basic commands:
     
-    - Short press
-    - Long press (enhanced with multiple detection patterns)
-    - Double press
+    - Short press (press_type: 0)
+    - Double press (press_type: 1)
+    - Long press (press_type: 2)
     - Rotate left
     - Rotate right
     
@@ -92,17 +92,17 @@ action:
   - choose:
     # Short Press
     - conditions:
-        - "{{ command == 'toggle' or command == 'remote_button_short_press' }}"
+        - "{{ command == 'toggle' or command == 'remote_button_short_press' or (command == 'press_type' and args.press_type == 0) }}"
       sequence: !input press_short
 
     # Double Press
     - conditions:
-        - "{{ command == 'remote_button_double_press' }}"
+        - "{{ command == 'remote_button_double_press' or (command == 'press_type' and args.press_type == 1) }}"
       sequence: !input press_double
 
     # Long Press
     - conditions:
-        - "{{ command == 'remote_button_long_press' or command == 'hold' or command == 'press_and_hold' or (command == 'on_with_timed_off' and cluster_id == 6) }}"
+        - "{{ command == 'remote_button_long_press' or command == 'hold' or command == 'press_and_hold' or (command == 'press_type' and args.press_type == 2) }}"
       sequence: !input press_long
 
     # Rotate Left (Step Down)
@@ -114,8 +114,3 @@ action:
     - conditions:
         - "{{ command == 'right' or command == 'move_to_level' or (command == 'step' and direction == 0) or (command == 'move' and direction == 0) }}"
       sequence: !input rotate_right
-      
-    # Fallback for other button actions that might be long press
-    - conditions:
-        - "{{ command == 'on' and cluster_id == 6 }}"
-      sequence: !input press_long
