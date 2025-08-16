@@ -7,7 +7,7 @@ blueprint:
     It provides simple custom actions for five basic commands:
     
     - Short press
-    - Long press
+    - Long press (enhanced with multiple detection patterns)
     - Double press
     - Rotate left
     - Rotate right
@@ -15,8 +15,8 @@ blueprint:
     For each command type, you can define your own custom action to control any entity
     or perform any action in Home Assistant.
     
-    NOTE: If rotation is not working, uncomment the debug section in the code to see
-    what commands your device is sending, then adjust the conditions accordingly.
+    NOTE: Debug logging is enabled by default to help identify command patterns.
+    After everything is working properly, you can comment out the debug section.
 
     Sold on AliExpress by brands like Moes, Girier etc.
 
@@ -79,11 +79,15 @@ action:
       args: "{{ trigger.event.data.args }}"
       direction: "{% if trigger.event.data.args[0] == 0 %} 0 {% elif trigger.event.data.args[0] == 1 %} 1 {% elif trigger.event.data.args[0] == 3 %} 3 {% endif %}"
   
-  # Debug info (uncomment to log all events from the remote for debugging)
-  # - service: system_log.write
-  #   data:
-  #     message: "Knob Debug - Command: {{ command }}, Cluster: {{ cluster_id }}, Endpoint: {{ endpoint_id }}, Args: {{ args }}"
-  #     level: info
+  # Debug info - logs all events from the remote for debugging
+  - service: system_log.write
+    data:
+      message: >-
+        Knob Debug - Command: {{ command }}, 
+        Cluster: {{ cluster_id }}, 
+        Endpoint: {{ endpoint_id }}, 
+        Args: {{ args }}
+      level: info
 
   - choose:
     # Short Press
@@ -98,7 +102,7 @@ action:
 
     # Long Press
     - conditions:
-        - "{{ command == 'remote_button_long_press' }}"
+        - "{{ command == 'remote_button_long_press' or command == 'hold' or command == 'press_and_hold' or (command == 'on_with_timed_off' and cluster_id == 6) }}"
       sequence: !input press_long
 
     # Rotate Left (Step Down)
@@ -110,3 +114,8 @@ action:
     - conditions:
         - "{{ command == 'right' or command == 'move_to_level' or (command == 'step' and direction == 0) or (command == 'move' and direction == 0) }}"
       sequence: !input rotate_right
+      
+    # Fallback for other button actions that might be long press
+    - conditions:
+        - "{{ command == 'on' and cluster_id == 6 }}"
+      sequence: !input press_long
