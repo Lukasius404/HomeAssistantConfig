@@ -14,6 +14,9 @@ blueprint:
     
     For each command type, you can define your own custom action to control any entity
     or perform any action in Home Assistant.
+    
+    NOTE: If rotation is not working, uncomment the debug section in the code to see
+    what commands your device is sending, then adjust the conditions accordingly.
 
     Sold on AliExpress by brands like Moes, Girier etc.
 
@@ -74,6 +77,13 @@ action:
       cluster_id: "{{ trigger.event.data.cluster_id }}"
       endpoint_id: "{{ trigger.event.data.endpoint_id }}"
       args: "{{ trigger.event.data.args }}"
+      direction: "{% if trigger.event.data.args[0] == 0 %} 0 {% elif trigger.event.data.args[0] == 1 %} 1 {% elif trigger.event.data.args[0] == 3 %} 3 {% endif %}"
+  
+  # Debug info (uncomment to log all events from the remote for debugging)
+  # - service: system_log.write
+  #   data:
+  #     message: "Knob Debug - Command: {{ command }}, Cluster: {{ cluster_id }}, Endpoint: {{ endpoint_id }}, Args: {{ args }}"
+  #     level: info
 
   - choose:
     # Short Press
@@ -93,10 +103,10 @@ action:
 
     # Rotate Left (Step Down)
     - conditions:
-        - "{{ command == 'left' or (command == 'step' and args[0] == 1) }}"
+        - "{{ command == 'left' or command == 'move_to_level_with_on_off' or (command == 'step' and direction == 1) or (command == 'move' and direction == 1) }}"
       sequence: !input rotate_left
 
     # Rotate Right (Step Up)
     - conditions:
-        - "{{ command == 'right' or (command == 'step' and args[0] == 0) }}"
+        - "{{ command == 'right' or command == 'move_to_level' or (command == 'step' and direction == 0) or (command == 'move' and direction == 0) }}"
       sequence: !input rotate_right
