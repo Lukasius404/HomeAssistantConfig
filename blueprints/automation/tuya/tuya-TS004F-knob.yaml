@@ -4,43 +4,22 @@ blueprint:
 
   description: >-
     This automation adds triggers for all actions of the Tuya TS004F rotating knob remote.
-    It provides flexible custom actions for each command type instead of hardcoded light controls.
+    It provides simple custom actions for five basic commands:
     
-    You can define your own actions for:
-    - Button press (toggle)
-    - Rotation up/down (step commands)
-    - Color temperature adjustments
-    - Hue adjustments
-    - Stop movement commands
+    - Short press
+    - Long press
+    - Double press
+    - Rotate left
+    - Rotate right
     
-    This gives you complete flexibility to control any entity or perform any action.
+    For each command type, you can define your own custom action to control any entity
+    or perform any action in Home Assistant.
 
     Sold on AliExpress by brands like Moes, Girier etc.
 
   domain: automation
 
   input:
-    mode:
-      name: Automation Mode
-      description: "https://www.home-assistant.io/docs/automation/modes/"
-      default: restart
-      selector:
-        select:
-          mode: dropdown
-          options:
-            - single
-            - restart
-            - queued
-            - parallel
-    max:
-      name: Automation Max Queue
-      description: The maximum number of runs that can be executing and/or queued up at a time.
-      default: 10
-      selector:
-        number:
-          mode: box
-          min: 1
-          max: 100
     remote:
       name: Tuya - TS004F Rotating Knob
       description: Select the remote control you wish to use.
@@ -49,76 +28,38 @@ blueprint:
           integration: zha
           manufacturer: _TZ3000_4fjiwweb
           model: TS004F
-    toggle_action:
-      name: Toggle Action
-      description: Action to perform when the button is pressed
-      selector:
-        action:
-      default: []
-    step_up_action:
-      name: Step Up Action
-      description: Action to perform when rotating clockwise
-      selector:
-        action:
-      default: []
-    step_down_action:
-      name: Step Down Action
-      description: Action to perform when rotating counter-clockwise
-      selector:
-        action:
-      default: []
-    color_temp_up_action:
-      name: Color Temperature Up Action
-      description: Action to perform when adjusting color temperature up
-      selector:
-        action:
-      default: []
-    color_temp_down_action:
-      name: Color Temperature Down Action
-      description: Action to perform when adjusting color temperature down
-      selector:
-        action:
-      default: []
-    hue_action:
-      name: Hue Action
-      description: Action to perform when adjusting hue
-      selector:
-        action:
-      default: []
-    stop_action:
-      name: Stop Action
-      description: Action to perform when stopping movement
-      selector:
-        action:
-      default: []
     press_short:
-      name: Short Press (Event/Scene mode)
+      name: Short Press
+      description: Action to perform when button is pressed once
       selector:
         action:
       default: []
     press_double:
-      name: Double Press (Event/Scene mode)
+      name: Double Press
+      description: Action to perform when button is double-pressed
       selector:
         action:
       default: []
     press_long:
-      name: Long Press (Event/Scene mode)
+      name: Long Press
+      description: Action to perform when button is long-pressed
       selector:
         action:
       default: []
     rotate_left:
-      name: Rotate Left (Event/Scene mode)
+      name: Rotate Left
+      description: Action to perform when rotating counter-clockwise (step down)
       selector:
         action:
       default: []
     rotate_right:
-      name: Rotate Right (Event/Scene mode)
+      name: Rotate Right
+      description: Action to perform when rotating clockwise (step up)
       selector:
         action:
       default: []
 
-mode: !input mode
-max: !input max
+mode: restart
 max_exceeded: silent
 
 trigger:
@@ -133,86 +74,29 @@ action:
       cluster_id: "{{ trigger.event.data.cluster_id }}"
       endpoint_id: "{{ trigger.event.data.endpoint_id }}"
       args: "{{ trigger.event.data.args }}"
-      direction: "{% if trigger.event.data.args[0] == 0 %} 0 {% elif trigger.event.data.args[0] == 1 %} 1 {% elif trigger.event.data.args[0] == 3 %} 3 {% endif %}"
-      value: "{% if trigger.event.data.args[1] %} {{ trigger.event.data.args[1] / 2 }} {% endif %}"
-      speed: "{% if trigger.event.data.args[2] == 1 %} 0.5 {% else %} 0 {% endif %}"
 
   - choose:
-
-    # Command Mode
+    # Short Press
     - conditions:
-        - "{{ command == 'toggle' }}"
-        - "{{ cluster_id == 6 }}"
-        - "{{ endpoint_id == 1 }}"
-      sequence: !input toggle_action
-
-    # Command Mode: Step Up
-    - conditions:
-        - "{{ command == 'step' }}"
-        - "{{ cluster_id == 8 }}"
-        - "{{ endpoint_id == 1 }}"
-        - "{{ direction == 0 }}"
-      sequence: !input step_up_action
-
-    # Command Mode: Step Down
-    - conditions:
-        - "{{ command == 'step' }}"
-        - "{{ cluster_id == 8 }}"
-        - "{{ endpoint_id == 1 }}"
-        - "{{ direction == 1 }}"
-      sequence: !input step_down_action
-
-    # Command Mode: Color Temperature Up
-    - conditions:
-        - "{{ command == 'step_color_temp' }}"
-        - "{{ cluster_id == 768 }}"
-        - "{{ endpoint_id == 1 }}"
-        - "{{ direction == 1 }}"
-      sequence: !input color_temp_up_action
-
-    # Command Mode: Color Temperature Down
-    - conditions:
-        - "{{ command == 'step_color_temp' }}"
-        - "{{ cluster_id == 768 }}"
-        - "{{ endpoint_id == 1 }}"
-        - "{{ direction == 3 }}"
-      sequence: !input color_temp_down_action
-
-    # Command Mode: Color Hue
-    - conditions:
-        - "{{ command == 'move_hue' }}"
-        - "{{ cluster_id == 768 }}"
-        - "{{ endpoint_id == 1 }}"
-      sequence: !input hue_action
-
-    # Command Mode: Stop Movement
-    - conditions:
-        - "{{ command == 'stop_move_step' }}"
-        - "{{ cluster_id == 768 }}"
-        - "{{ endpoint_id == 1 }}"
-      sequence: !input stop_action
-
-    # Event mode: Short Press
-    - conditions:
-        - "{{ command == 'remote_button_short_press' }}"
+        - "{{ command == 'toggle' or command == 'remote_button_short_press' }}"
       sequence: !input press_short
 
-    # Event mode: Double Press
+    # Double Press
     - conditions:
         - "{{ command == 'remote_button_double_press' }}"
       sequence: !input press_double
 
-    # Event mode: Long Press
+    # Long Press
     - conditions:
         - "{{ command == 'remote_button_long_press' }}"
       sequence: !input press_long
 
-    # Event mode: Rotate Left
+    # Rotate Left (Step Down)
     - conditions:
-        - "{{ command == 'left' }}"
+        - "{{ command == 'left' or (command == 'step' and args[0] == 1) }}"
       sequence: !input rotate_left
 
-    # Event mode: Rotate Right
+    # Rotate Right (Step Up)
     - conditions:
-        - "{{ command == 'right' }}"
+        - "{{ command == 'right' or (command == 'step' and args[0] == 0) }}"
       sequence: !input rotate_right
